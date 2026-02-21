@@ -1,16 +1,20 @@
 [project]
 name = "shopify-demo"
 version = "0.1.0"
-description = "Add your description here"
+description = "Shopify demo project"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.12, <3.14"
 dependencies = [
     "httpx>=0.28.1",
+    "loguru>=0.7.3",
+    "pydantic>=2.12.5",
+    "pydantic-settings>=2.13.1",
     "python-dotenv>=1.2.1",
 ]
 
 [dependency-groups]
 dev = [
     "mypy>=1.19.1",
+    "pytest>=9.0.2",
     "ruff>=0.15.2",
 ]

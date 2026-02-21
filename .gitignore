@@ -22,3 +22,5 @@ wheels/
 # Editor/IDE
 .vscode/
 .idea/
+
+*.html

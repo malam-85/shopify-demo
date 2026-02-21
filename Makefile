@@ -35,11 +35,11 @@ mypy:
 
 # Run tests
 test:
-	uv run pytest
+	uv run pytest tests/
 
 # Run the application
 run:
-	uv run python src/entrypoints/main.py
+	uv run python -m src.entrypoints.main
 
 # Run all checks (lint + type check + tests)
 ci: check mypy test
