@@ -39,4 +39,4 @@ class ShopifyGraphQLClient:
         if errors := body.get("errors"):
             raise ShopifyGraphQLError(errors)
 
-        return body.get("data", {})
+        return body

@@ -5,11 +5,18 @@ from src.domain.everstox_order import (
     CustomAttribute,
     EverstoxOrder,
     OrderItem,
+    PriceSet,
     Product,
+    ShipmentOption,
     ShippingAddress,
     ShippingPrice,
 )
-from src.domain.order import Order, OrderBillingAddress, OrderShippingAddress
+from src.domain.order import (
+    Order,
+    OrderBillingAddress,
+    OrderLineItem,
+    OrderShippingAddress,
+)
 
 # Placeholder shop instance ID — replace with the real Everstox shop UUID
 _SHOP_INSTANCE_ID = UUID("00000000-0000-0000-0000-000000000000")
@@ -46,6 +53,40 @@ def _map_billing_address(addr: OrderBillingAddress) -> BillingAddress:
     )
 
 
+def _map_order_items(
+    order_line_items: list[OrderLineItem],
+    shipment_options: list[ShipmentOption],
+) -> list[OrderItem]:
+    return [
+        OrderItem(
+            quantity=item.quantity,
+            product=Product(sku=item.sku),
+            shipment_options=shipment_options,
+            price_set=[
+                PriceSet(
+                    quantity=item.quantity,
+                    currency=item.currency,
+                    price=item.price,
+                    price_net_after_discount=item.price - item.discount_total,
+                    tax_amount=sum(t.amount for t in item.tax_lines),
+                    tax_rate=item.tax_lines[0].rate if item.tax_lines else 0.0,
+                    tax=sum(t.amount for t in item.tax_lines),
+                    discount=item.discount_total,
+                    discount_gross=item.discount_total,
+                )
+            ],
+            custom_attributes=[
+                CustomAttribute(
+                    attribute_key=ca["key"],
+                    attribute_value=ca["value"],
+                )
+                for ca in item.custom_attributes
+            ],
+        )
+        for item in order_line_items
+    ]
+
+
 def map_order_to_everstox(order: Order) -> EverstoxOrder:
     """Convert a Shopify ``Order`` to an ``EverstoxOrder`` DTO."""
     shipping_address = (
@@ -73,29 +114,40 @@ def map_order_to_everstox(order: Order) -> EverstoxOrder:
         )
     )
 
+    sl = order.shipping_line
+    shipment_options = [ShipmentOption(name=sl.title)] if sl else []
+
+    shipping_price = ShippingPrice(
+        currency=sl.currency if sl else order.currency,
+        price=sl.original_price if sl else 0.0,
+        price_net_after_discount=(
+            sl.discounted_price - sum(t.amount for t in sl.tax_lines)
+        )
+        if sl
+        else 0.0,
+        tax_amount=sum(t.amount for t in sl.tax_lines) if sl else 0.0,
+        tax_rate=sl.tax_lines[0].rate if (sl and sl.tax_lines) else 0.0,
+        tax=sum(t.amount for t in sl.tax_lines) if sl else 0.0,
+        discount=(sl.original_price - sl.discounted_price) if sl else 0.0,
+        discount_gross=(sl.original_price - sl.discounted_price) if sl else 0.0,
+    )
+
+    line_items = (
+        _map_order_items(order.line_items, shipment_options)
+        if order.line_items
+        else [OrderItem(quantity=1, product=Product(sku="TODO"))]
+    )
+
     return EverstoxOrder(
         shop_instance_id=_SHOP_INSTANCE_ID,
         order_number=order.name,
         order_date=order.created_at,
-        customer_email="todo@example.com",  # TODO: from Shopify customer field
+        customer_email=order.email or "unknown@example.com",
         financial_status=order.financial_status,
         shipping_address=shipping_address,
         billing_address=billing_address,
-        shipping_price=ShippingPrice(  # TODO: from Shopify shippingLine field
-            currency=order.currency,
-            price_net_after_discount=0.0,
-            tax_amount=0.0,
-            tax_rate=0.0,
-            price=0.0,
-            tax=0.0,
-            discount=0.0,
-            discount_gross=0.0,
-        ),
-        order_items=[
-            OrderItem(
-                quantity=1, product=Product(sku="TODO")
-            )  # TODO: from Shopify lineItems
-        ],
+        shipping_price=shipping_price,
+        order_items=line_items,
         custom_attributes=[
             CustomAttribute(attribute_key="shopify_order_id", attribute_value=order.id)
         ],

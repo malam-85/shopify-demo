@@ -25,8 +25,8 @@ class Executor:
         logger.info(f"Found {len(orders)} order(s) — forwarding to Everstox.")
 
         for order in orders:
-            logger.info(
-                f"{order.name} | {order.financial_status} | {order.fulfillment_status} "
+            logger.debug(
+                f"{order.name} | {order.financial_status} | {order.fulfillment_status} |  {order.line_items} | {order.tags}"
                 f"| {order.total_price} {order.currency}"
             )
 

@@ -167,3 +167,17 @@ http_client = httpx.Client()
 | `pytest` | Test framework |
 | `mypy` | Static type checking |
 | `ruff` | Linting and formatting |
+
+## Multi-currency extension
+Currently using shopMoney (shop base currency) for all amounts. To support multi-currency, replace shopMoney with presentmentMoney. Since different orders may use different currencies, amounts would need to be grouped by currencyCode before aggregation or converted to a single target currency via an Foreign Exchange layer which converts amounts from one currency to another using exchange rates.
+
+## Tag filtering policy
+- Case-insensitive exact match
+- Blacklist takes precedence over whitelist
+- If blacklist matches → order excluded, regardless of whitelist
+- If whitelist is empty → all non-blacklisted orders pass
+- If whitelist is defined → order must contain at least one whitelist tag
+- Excluded orders are logged with the matching tag
+
+## Shopify GraphQL Throttling
+Shopify limits API usage via a point-based budget. After every paginated request, the implementation reads the remaining budget from the response extensions field. Before fetching the next page, it checks if the budget is sufficient for the next request plus a safety buffer. If not, it calculates the exact wait time based on Shopify's restore rate and sleeps accordingly — preventing throttle errors before they occur rather than reacting to them.

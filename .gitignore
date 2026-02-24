@@ -24,3 +24,5 @@ wheels/
 .idea/
 
 *.html
+
+.claude/
